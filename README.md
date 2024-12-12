@@ -24,8 +24,8 @@ pip install requests
 ## Installation
 Clone this repository to your local machine:
 ```bash
-git clone https://github.com/yourusername/wayback-url-extractor.git
-cd wayback-url-extractor
+git clone https://github.com/yourusername/wayback-url-extractor.git](https://github.com/mohammaddalieft/sAllUrl.git
+cd sAllUrl
 ```
 
 ## Usage
