@@ -1,4 +1,4 @@
-# search all url
+# seach all url
 This tool allows you to extract URLs from websites using two different sources: the [Wayback Machine](https://web.archive.org/) and the [GAU](https://github.com/lc/gau) tool. The tool can help you gather all available URLs for a given website, and you can choose to store them in one combined file or separate files based on the website.
 ## Features
 
@@ -35,7 +35,7 @@ The tool allows you to extract URLs from one or more websites by providing a lis
 #### Running the script
 You can run the script with the following command:
 ```bash
-python waybackurl.py <option>
+python seachallurl.py <option>
 
 ```
 `<option>` can be either `y` or `n`:
@@ -44,19 +44,19 @@ python waybackurl.py <option>
 - `n`: Save all URLs in a single file called `combined_urls.txt`.
 #### For example:
 ```bash
-python waybackurl.py y  # Save in separate files for each website
-python waybackurl.py n  # Save in a single combined file
+python seachallurl.py y  # Save in separate files for each website
+python seachallurl.py n  # Save in a single combined file
 
 ```
 #### Input Format
 The script expects a list of websites provided via standard input. You can provide the list either manually or by using a text file. Here’s an example:
 ```bash
-echo -e "voorivex.academy\nmemoryleak.ir" | python waybackurl.py y
+echo -e "voorivex.academy\nmemoryleak.ir" | python seachallurl.py y
 
 ```
 Alternatively, you can store the websites in a file and use the following:
 ```bash
-cat websites.txt | python waybackurl.py n
+cat websites.txt | python seachallurl.py n
 
 ```
 ### 2. How It Works
