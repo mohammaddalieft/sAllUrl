@@ -51,7 +51,7 @@ python seachallurl.py n  # Save in a single combined file
 #### Input Format
 The script expects a list of websites provided via standard input. You can provide the list either manually or by using a text file. Here’s an example:
 ```bash
-echo -e "voorivex.academy\nmemoryleak.ir" | python seachallurl.py y
+echo -e "example.com1\example.com2" | python seachallurl.py y
 
 ```
 Alternatively, you can store the websites in a file and use the following:
