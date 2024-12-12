@@ -1,4 +1,4 @@
-# seach all url
+# search all url
 This tool allows you to extract URLs from websites using two different sources: the [Wayback Machine](https://web.archive.org/) and the [GAU](https://github.com/lc/gau) tool. The tool can help you gather all available URLs for a given website, and you can choose to store them in one combined file or separate files based on the website.
 ## Features
 
