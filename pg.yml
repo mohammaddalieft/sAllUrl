@@ -1,0 +1,218 @@
+name: 01- 🔞 Video Downloader
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_urls:
+        description: '🔗 Video URL(s) — separate multiple URLs with spaces'
+        required: true
+        type: string
+
+      quality:
+        description: '🎬 Video quality'
+        required: false
+        default: 'best'
+        type: choice
+        options:
+          - best
+          - 1080
+          - 720
+          - 480
+          - audio
+
+      password:
+        description: '🔒 Password for zip files (optional)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  download-video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    permissions:
+      contents: write
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            python3-pip \
+            ffmpeg \
+            zip \
+            unzip \
+            p7zip-full \
+            jq \
+            bc
+
+          pip3 install --upgrade yt-dlp
+
+      - name: Download Videos
+        env:
+          VIDEO_URLS: ${{ github.event.inputs.video_urls }}
+          QUALITY: ${{ github.event.inputs.quality }}
+          ZIP_PASSWORD: ${{ github.event.inputs.password }}
+        run: |
+
+          read -ra URL_LIST <<< "$VIDEO_URLS"
+
+          SPLIT_MB=45
+
+          mkdir -p videos
+
+          sanitize_name() {
+            echo "$1" | sed 's/ /-/g' | tr -s '-'
+          }
+
+          urlencode() {
+            python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$1"
+          }
+
+          case "$QUALITY" in
+            "audio")
+              FORMAT="bestaudio"
+              ;;
+            "1080")
+              FORMAT="bestvideo[height<=1080]+bestaudio/best[height<=1080]"
+              ;;
+            "720")
+              FORMAT="bestvideo[height<=720]+bestaudio/best[height<=720]"
+              ;;
+            "480")
+              FORMAT="bestvideo[height<=480]+bestaudio/best[height<=480]"
+              ;;
+            *)
+              FORMAT="best"
+              ;;
+          esac
+
+          for URL in "${URL_LIST[@]}"; do
+
+            echo "Downloading: $URL"
+
+            TMP_DIR=$(mktemp -d)
+
+            if [ "$QUALITY" = "audio" ]; then
+
+              yt-dlp \
+                --extract-audio \
+                --audio-format mp3 \
+                --audio-quality 0 \
+                --output "${TMP_DIR}/%(title)s.%(ext)s" \
+                "$URL"
+
+            else
+
+              yt-dlp \
+                --format "$FORMAT" \
+                --merge-output-format mp4 \
+                --output "${TMP_DIR}/%(title)s.%(ext)s" \
+                "$URL"
+
+            fi
+
+            for FILE in "$TMP_DIR"/*; do
+
+              [ -f "$FILE" ] || continue
+
+              BASENAME=$(basename "$FILE")
+
+              NAME="${BASENAME%.*}"
+
+              EXT="${BASENAME##*.}"
+
+              SAFE_NAME=$(sanitize_name "$NAME")
+
+              FINAL_DIR="videos/${SAFE_NAME}"
+
+              mkdir -p "$FINAL_DIR"
+
+              SIZE=$(stat -c%s "$FILE")
+
+              SPLIT_BYTES=$(( SPLIT_MB * 1024 * 1024 ))
+
+              if [ "$SIZE" -gt "$SPLIT_BYTES" ]; then
+
+                echo "Splitting archive..."
+
+                if [ -n "$ZIP_PASSWORD" ]; then
+
+                  7z a \
+                    -v${SPLIT_MB}m \
+                    -p"${ZIP_PASSWORD}" \
+                    "${FINAL_DIR}/${SAFE_NAME}.7z" \
+                    "$FILE"
+
+                else
+
+                  7z a \
+                    -v${SPLIT_MB}m \
+                    "${FINAL_DIR}/${SAFE_NAME}.7z" \
+                    "$FILE"
+
+                fi
+
+              else
+
+                cp "$FILE" "${FINAL_DIR}/${SAFE_NAME}.${EXT}"
+
+              fi
+
+              README="${FINAL_DIR}/README.md"
+
+              {
+                echo "# ${SAFE_NAME}"
+                echo ""
+                echo "## Download Links"
+                echo ""
+
+                COUNT=1
+
+                for PART in $(ls "$FINAL_DIR"); do
+
+                  [ "$PART" = "README.md" ] && continue
+
+                  PART_ENC=$(urlencode "$PART")
+
+                  SAFE_ENC=$(urlencode "$SAFE_NAME")
+
+                  LINK="https://github.com/${GITHUB_REPOSITORY}/raw/main/videos/${SAFE_ENC}/${PART_ENC}"
+
+                  echo "| ${COUNT} | [${PART}](${LINK}) |"
+
+                  COUNT=$((COUNT + 1))
+
+                done
+
+                echo ""
+                echo "## Extract"
+                echo ""
+                echo "Download all parts and extract the first .7z file."
+
+              } > "$README"
+
+            done
+
+            rm -rf "$TMP_DIR"
+
+          done
+
+      - name: Commit and Push
+        run: |
+
+          git config user.name "github-actions"
+
+          git config user.email "github-actions@github.com"
+
+          git add videos/
+
+          git commit -m "Add downloaded videos" || echo "No changes"
+
+          git push
